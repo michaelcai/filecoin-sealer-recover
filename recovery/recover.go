@@ -29,6 +29,7 @@ import (
 	"github.com/filecoin-project/lotus/storage/sealer/storiface"
 	"github.com/froghub-io/filecoin-sealer-recover/export"
 	logging "github.com/ipfs/go-log/v2"
+	cid "github.com/ipfs/go-cid"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -69,6 +70,10 @@ var RecoverCmd = &cli.Command{
 			Value: "~/temp",
 			Usage: "Temporarily generated during sector file",
 		},
+		&cli.StringFlag{
+			Name: "piece-cid",
+			Usage: "Piece CID"
+		}
 	},
 	Action: func(cctx *cli.Context) error {
 		log.Info("Start sealer recovery!")
@@ -127,7 +132,7 @@ var RecoverCmd = &cli.Command{
 
 		rp.SectorInfos = sectorInfos
 
-		if err = RecoverSealedFile(ctx, rp, cctx.Uint("parallel"), cctx.String("sealing-result"), cctx.String("sealing-temp")); err != nil {
+		if err = RecoverSealedFile(ctx, rp, cctx.Uint("parallel"), cctx.String("sealing-result"), cctx.String("sealing-temp"), cctx.String("piece-cid")); err != nil {
 			return err
 		}
 		log.Info("Complete recovery sealed!")
@@ -154,7 +159,7 @@ func migrateRecoverMeta(ctx context.Context, metadata string) (export.RecoveryPa
 	return rp, nil
 }
 
-func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel uint, sealingResult string, sealingTemp string) error {
+func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel uint, sealingResult string, sealingTemp string, pieceCID string) error {
 	actorID, err := address.IDFromAddress(rp.Miner)
 	if err != nil {
 		return xerrors.Errorf("Getting IDFromAddress err:", err)
@@ -212,9 +217,9 @@ func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel u
 			log.Infof("Start recover sector(%d,%d), registeredSealProof: %d, ticket: %x", actorID, sector.SectorNumber, sector.SealProof, sector.Ticket)
 
 			log.Infof("Start running AP, sector (%d)", sector.SectorNumber)
-			pi, err := sb.AddPiece(context.TODO(), sid, nil, abi.PaddedPieceSize(rp.SectorSize).Unpadded(), nr.NewNullReader(abi.UnpaddedPieceSize(rp.SectorSize)))
-			if err != nil {
-				log.Errorf("Sector (%d) ,running AP  error: %v", sector.SectorNumber, err)
+			pi := abi.PieceInfo {
+				Size: abi.PaddedPieceSize(rp.SectorSize)
+				PieceCID: cid.Decode(pieceCID)
 			}
 			var pieces []abi.PieceInfo
 			pieces = append(pieces, pi)
