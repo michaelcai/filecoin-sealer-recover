@@ -179,7 +179,7 @@ sealer-recover recover [command options] [sectorNum1 sectorNum2 ...]
 
 ### Other
 - [FILFrog](https://www.froghub.io/)
-- [Lotus CloudC2](https://github.com/froghub-io/lotus-cloudc2)
+- [Lotus CloudC2](https://github.com/michaelcai/lotus-cloudc2)
 
 ### 联系我们
 
@@ -195,4 +195,4 @@ sealer-recover recover [command options] [sectorNum1 sectorNum2 ...]
 
 ## License
 
-Licensed under [Apache 2.0](https://github.com/froghub-io/filecoin-sealer-recover/blob/main/LICENSE)
+Licensed under [Apache 2.0](https://github.com/michaelcai/filecoin-sealer-recover/blob/main/LICENSE)

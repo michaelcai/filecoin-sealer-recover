@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"math/bits"
 	"math/rand"
@@ -31,13 +30,14 @@ import (
 	"time"
 
 	"github.com/filecoin-project/go-address"
+	"github.com/filecoin-project/go-padreader"
 	"github.com/filecoin-project/go-state-types/abi"
 	cliutil "github.com/filecoin-project/lotus/cli/util"
 	"github.com/filecoin-project/lotus/storage/sealer/ffiwrapper"
 	"github.com/filecoin-project/lotus/storage/sealer/ffiwrapper/basicfs"
 	"github.com/filecoin-project/lotus/storage/sealer/storiface"
-	"github.com/froghub-io/filecoin-sealer-recover/export"
 	logging "github.com/ipfs/go-log/v2"
+	"github.com/michaelcai/filecoin-sealer-recover/export"
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
@@ -222,18 +222,15 @@ func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel u
 			if err != nil {
 				log.Errorf("Sector (%d) , read piece  error: %v", sector.SectorNumber, err)
 			}
-			p, err := os.OpenFile(piecePath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0644)
+			p, err := os.Open(piecePath)
+			info, err := os.Stat(piecePath)
 			if err != nil {
 				log.Errorf("Sector (%d) , read piece  error: %v", sector.SectorNumber, err)
 			}
 			defer p.Close()
-			unPSize := abi.PaddedPieceSize(rp.SectorSize).Unpadded()
-			err = unPSize.Validate()
-			if err != nil {
-				log.Errorf("Sector (%d) , UnpaddedPieceSize  error: %v", sector.SectorNumber, err)
-			}
+			paddedReader, paddedSize := padreader.New(p, uint64(info.Size()))
 			log.Infof("Start running AP, sector (%d)", sector.SectorNumber)
-			pi, err := sb.AddPiece(context.TODO(), sid, nil, unPSize, io.LimitReader(p, int64(unPSize)))
+			pi, err := sb.AddPiece(context.TODO(), sid, nil, paddedSize, paddedReader)
 			if err != nil {
 				log.Errorf("Sector (%d) , AP  error: %v", sector.SectorNumber, err)
 			}

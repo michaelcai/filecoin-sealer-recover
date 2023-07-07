@@ -17,11 +17,13 @@
 package main
 
 import (
-	"github.com/froghub-io/filecoin-sealer-recover/export"
-	"github.com/froghub-io/filecoin-sealer-recover/recovery"
-	logging "github.com/ipfs/go-log/v2"
-	"github.com/urfave/cli/v2"
 	"os"
+
+	logging "github.com/ipfs/go-log/v2"
+	"github.com/michaelcai/filecoin-sealer-recover/cmdtest"
+	"github.com/michaelcai/filecoin-sealer-recover/export"
+	"github.com/michaelcai/filecoin-sealer-recover/recovery"
+	"github.com/urfave/cli/v2"
 )
 
 var log = logging.Logger("sealer-recover-main")
@@ -36,6 +38,7 @@ func main() {
 		Commands: []*cli.Command{
 			recovery.RecoverCmd,
 			export.ExportsCmd,
+			cmdtest.CmdtestCmd,
 		},
 	}
 

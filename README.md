@@ -194,7 +194,7 @@ PRs, bug reports and issue suggestions are welcome! For major changes, please as
 ### Other
 
 - [FILFrog](https://www.froghub.io/)
-- [Lotus CloudC2](https://github.com/froghub-io/lotus-cloudc2)
+- [Lotus CloudC2](https://github.com/michaelcai/lotus-cloudc2)
 
 ### Contact us
 
@@ -209,4 +209,4 @@ PRs, bug reports and issue suggestions are welcome! For major changes, please as
 
 ## License
 
-Licensed under [Apache 2.0](https://github.com/froghub-io/filecoin-sealer-recover/blob/main/LICENSE)
+Licensed under [Apache 2.0](https://github.com/michaelcai/filecoin-sealer-recover/blob/main/LICENSE)
