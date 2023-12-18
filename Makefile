@@ -24,7 +24,7 @@ install:
 
 clean:
 	-rm -f $(TARGET)
-	-make -C $(LOTUS_PATH) clean
+	-make -C $(LOTUS_PATH) clean	
 
 switch-master:
 	git submodule set-branch --branch master $(TARGET)

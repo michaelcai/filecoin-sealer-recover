@@ -1,4 +1,11 @@
 [submodule "extern/lotus"]
 	path = extern/lotus
-	url = https://github.com/filecoin-project/lotus.git
+	url = git@github.com:ppiaas/lotus.git
 	ignore = dirty
+	branch = nightly
+
+[submodule "extern/rust-fil-proofs"]
+	path = extern/rust-fil-proofs
+	url = git@github.com:ppiaas/rust-fil-proofs.git
+	ignore = dirty
+	branch = ppiaas/main

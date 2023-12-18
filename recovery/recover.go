@@ -20,8 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"math/bits"
 	"math/rand"
 	"os"
 	"strconv"
@@ -70,10 +68,6 @@ var RecoverCmd = &cli.Command{
 			Name:  "sealing-temp",
 			Value: "~/temp",
 			Usage: "Temporarily generated during sector file",
-		},
-		&cli.StringFlag{
-			Name:  "piece-cid",
-			Usage: "Piece CID",
 		},
 		&cli.StringFlag{
 			Name: "piece-path",
@@ -136,7 +130,7 @@ var RecoverCmd = &cli.Command{
 
 		rp.SectorInfos = sectorInfos
 
-		if err = RecoverSealedFile(ctx, rp, cctx.Uint("parallel"), cctx.String("sealing-result"), cctx.String("sealing-temp"), cctx.String("piece-cid"), cctx.String("piece-path")); err != nil {
+		if err = RecoverSealedFile(ctx, rp, cctx.Uint("parallel"), cctx.String("sealing-result"), cctx.String("sealing-temp"), cctx.String("piece-path")); err != nil {
 			return err
 		}
 		log.Info("Complete recovery sealed!")
@@ -150,7 +144,7 @@ func migrateRecoverMeta(ctx context.Context, metadata string) (export.RecoveryPa
 		return export.RecoveryParams{}, xerrors.Errorf("expanding sectors recovery dir: %w", err)
 	}
 
-	b, err := ioutil.ReadFile(metadata)
+	b, err := os.ReadFile(metadata)
 	if err != nil {
 		return export.RecoveryParams{}, xerrors.Errorf("reading sectors recovery metadata: %w", err)
 	}
@@ -163,10 +157,10 @@ func migrateRecoverMeta(ctx context.Context, metadata string) (export.RecoveryPa
 	return rp, nil
 }
 
-func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel uint, sealingResult string, sealingTemp string, pieceCID string, piecePath string) error {
+func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel uint, sealingResult string, sealingTemp string, piecePath string) error {
 	actorID, err := address.IDFromAddress(rp.Miner)
 	if err != nil {
-		return xerrors.Errorf("Getting IDFromAddress err:", err)
+		return xerrors.Errorf("Getting IDFromAddress err: %w", err)
 	}
 
 	wg := &sync.WaitGroup{}
@@ -196,7 +190,7 @@ func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel u
 				log.Errorf("Sector (%d) ,expands the path error: %v", sector.SectorNumber, err)
 			}
 			mkdirAll(sdir)
-			tempDir, err := ioutil.TempDir(sdir, fmt.Sprintf("recover-%d", sector.SectorNumber))
+			tempDir, err := os.MkdirTemp(sdir, fmt.Sprintf("recover-%d", sector.SectorNumber))
 			if err != nil {
 				log.Errorf("Sector (%d) ,creates a new temporary directory error: %v", sector.SectorNumber, err)
 			}
@@ -223,9 +217,12 @@ func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel u
 				log.Errorf("Sector (%d) , read piece  error: %v", sector.SectorNumber, err)
 			}
 			p, err := os.Open(piecePath)
+			if err != nil {
+				log.Errorf("Sector (%d) , os.Open  error: %v", sector.SectorNumber, err)
+			}
 			info, err := os.Stat(piecePath)
 			if err != nil {
-				log.Errorf("Sector (%d) , read piece  error: %v", sector.SectorNumber, err)
+				log.Errorf("Sector (%d) , os.Stat  error: %v", sector.SectorNumber, err)
 			}
 			defer p.Close()
 			paddedReader, paddedSize := padreader.New(p, uint64(info.Size()))
@@ -290,7 +287,7 @@ func MoveStorage(ctx context.Context, sector storiface.SectorRef, tempDir string
 	sectorNum := "s-t0" + sector.ID.Miner.String() + "-" + sector.ID.Number.String()
 
 	//del layer
-	files, _ := ioutil.ReadDir(tempDir + "/cache/" + sectorNum)
+	files, _ := os.ReadDir(tempDir + "/cache/" + sectorNum)
 	for _, f := range files {
 		if strings.Contains(f.Name(), "layer") || strings.Contains(f.Name(), "tree-c") || strings.Contains(f.Name(), "tree-d") {
 			if err := os.RemoveAll(tempDir + "/cache/" + sectorNum + "/" + f.Name()); err != nil {
@@ -314,40 +311,4 @@ func MoveStorage(ctx context.Context, sector storiface.SectorRef, tempDir string
 	}
 
 	return nil
-}
-
-func fillersFromRem(in abi.UnpaddedPieceSize) ([]abi.UnpaddedPieceSize, error) {
-	// Convert to in-sector bytes for easier math:
-	//
-	// Sector size to user bytes ratio is constant, e.g. for 1024B we have 1016B
-	// of user-usable data.
-	//
-	// (1024/1016 = 128/127)
-	//
-	// Given that we can get sector size by simply adding 1/127 of the user
-	// bytes
-	//
-	// (we convert to sector bytes as they are nice round binary numbers)
-
-	toFill := uint64(in + (in / 127))
-
-	// We need to fill the sector with pieces that are powers of 2. Conveniently
-	// computers store numbers in binary, which means we can look at 1s to get
-	// all the piece sizes we need to fill the sector. It also means that number
-	// of pieces is the number of 1s in the number of remaining bytes to fill
-	out := make([]abi.UnpaddedPieceSize, bits.OnesCount64(toFill))
-	for i := range out {
-		// Extract the next lowest non-zero bit
-		next := bits.TrailingZeros64(toFill)
-		psize := uint64(1) << next
-		// e.g: if the number is 0b010100, psize will be 0b000100
-
-		// set that bit to 0 by XORing it, so the next iteration looks at the
-		// next bit
-		toFill ^= psize
-
-		// Add the piece size to the list of pieces we need to create
-		out[i] = abi.PaddedPieceSize(psize).Unpadded()
-	}
-	return out, nil
 }
