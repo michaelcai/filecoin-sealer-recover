@@ -19,6 +19,10 @@ package export
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"strconv"
+	"time"
+
 	"github.com/filecoin-project/go-address"
 	"github.com/filecoin-project/go-state-types/abi"
 	"github.com/filecoin-project/lotus/chain/types"
@@ -28,9 +32,6 @@ import (
 	"github.com/mitchellh/go-homedir"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/xerrors"
-	"io/ioutil"
-	"strconv"
-	"time"
 )
 
 var log = logging.Logger("export")
@@ -141,6 +142,7 @@ type SectorInfo struct {
 	Ticket       abi.Randomness
 	SealProof    abi.RegisteredSealProof
 	SealedCID    cid.Cid
+	UnsealPath   string
 }
 
 type SectorInfos []*SectorInfo

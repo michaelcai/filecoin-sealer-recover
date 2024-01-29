@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -130,7 +131,7 @@ var RecoverCmd = &cli.Command{
 
 		rp.SectorInfos = sectorInfos
 
-		if err = RecoverSealedFile(ctx, rp, cctx.Uint("parallel"), cctx.String("sealing-result"), cctx.String("sealing-temp"), cctx.String("piece-path")); err != nil {
+		if err = RecoverSealedFile(ctx, rp, cctx.Uint("parallel"), cctx.String("sealing-result"), cctx.String("sealing-temp")); err != nil {
 			return err
 		}
 		log.Info("Complete recovery sealed!")
@@ -157,7 +158,7 @@ func migrateRecoverMeta(ctx context.Context, metadata string) (export.RecoveryPa
 	return rp, nil
 }
 
-func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel uint, sealingResult string, sealingTemp string, piecePath string) error {
+func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel uint, sealingResult string, sealingTemp string) error {
 	actorID, err := address.IDFromAddress(rp.Miner)
 	if err != nil {
 		return xerrors.Errorf("Getting IDFromAddress err: %w", err)
@@ -204,6 +205,8 @@ func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel u
 				log.Errorf("Sector (%d) ,new ffi Sealer error: %v", sector.SectorNumber, err)
 			}
 
+			// log.Infof(sb.)
+
 			sid := storiface.SectorRef{
 				ID: abi.SectorID{
 					Miner:  abi.ActorID(actorID),
@@ -212,22 +215,24 @@ func RecoverSealedFile(ctx context.Context, rp export.RecoveryParams, parallel u
 				ProofType: sector.SealProof,
 			}
 
+			unsealPath := filepath.Join(sdir, "unseal", fmt.Sprintf("s-%s-%s", strings.Replace(rp.Miner.String(), "f", "t", 1), sector.SectorNumber))
+
 			log.Infof("Start recover sector(%d,%d), registeredSealProof: %d, ticket: %x", actorID, sector.SectorNumber, sector.SealProof, sector.Ticket)
 			if err != nil {
 				log.Errorf("Sector (%d) , read piece  error: %v", sector.SectorNumber, err)
 			}
-			p, err := os.Open(piecePath)
+			p, err := os.Open(unsealPath)
 			if err != nil {
 				log.Errorf("Sector (%d) , os.Open  error: %v", sector.SectorNumber, err)
 			}
-			info, err := os.Stat(piecePath)
+			info, err := os.Stat(unsealPath)
 			if err != nil {
 				log.Errorf("Sector (%d) , os.Stat  error: %v", sector.SectorNumber, err)
 			}
 			defer p.Close()
 			paddedReader, paddedSize := padreader.New(p, uint64(info.Size()))
 			log.Infof("Start running AP, sector (%d)", sector.SectorNumber)
-			pi, err := sb.AddPiece(context.TODO(), sid, nil, paddedSize, paddedReader)
+			pi, err := sb.DataCid(context.TODO(), paddedSize, paddedReader)
 			if err != nil {
 				log.Errorf("Sector (%d) , AP  error: %v", sector.SectorNumber, err)
 			}

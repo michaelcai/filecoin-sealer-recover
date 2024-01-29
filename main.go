@@ -20,7 +20,6 @@ import (
 	"os"
 
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/michaelcai/filecoin-sealer-recover/cmdtest"
 	"github.com/michaelcai/filecoin-sealer-recover/export"
 	"github.com/michaelcai/filecoin-sealer-recover/recovery"
 	"github.com/urfave/cli/v2"
@@ -38,7 +37,6 @@ func main() {
 		Commands: []*cli.Command{
 			recovery.RecoverCmd,
 			export.ExportsCmd,
-			cmdtest.CmdtestCmd,
 		},
 	}
 
